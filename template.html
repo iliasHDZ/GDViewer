@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="template.css">
+    <title>GDViewer</title>
+</head>
+<body>
+    <div class="viewport">
+
+    </div>
+    <div class="main-ui">
+        <div class="search-section">
+            <div class="search-field">
+                <div class="searchbar-button">
+                    <span class="iconify icon" data-icon="mdi:filter" data-inline="false"></span>
+                </div>
+                <input type="text" spellcheck="false" class="search-input" placeholder="Category: Hall of Fame">
+                <div class="searchbar-button">
+                    <span class="iconify search-glass searchbar-button" data-icon="fa-solid:search" data-inline="false"></span>
+                </div>
+            </div>
+            <div class="search-list">
+                <p class="loading-title">Waiting for a response...</p>
+                <p class="loading-desc">Waiting for the GD servers to respond. This could take a while.</p>
+            </div>
+        </div>
+        <div class="info-section">
+            <div class="info-category">
+                <div class="cat-top">
+                    <p class="info-title">Currently Showing</p>
+                    <div class="cat-closer">
+                        <span class="iconify closer" data-icon="fe:arrow-down" data-inline="false"></span>
+                    </div>
+                </div>
+                <div class="cat-cont">
+                    <div class="info-loading">
+                        <p class="loading-title">Loading level...</p>
+                        <p class="loading-desc">Fetching the level to display it.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="info-category">
+                <div class="cat-top">
+                    <p class="info-title">Settings</p>
+                    <div class="cat-closer">
+                        <span class="iconify closer" data-icon="fe:arrow-down" data-inline="false"></span>
+                    </div>
+                </div>
+                <div class="cat-cont">
+                    <div class="checkbox-sec">
+                        <div class="checkbox checked">
+                            <span class="iconify checkmark" data-icon="topcoat:checkmark" data-inline="false"></span>
+                        </div>
+                        <span class="checkbox-text">
+                            Show guidelines
+                        </span>
+                    </div>
+                    <div class="checkbox-sec">
+                        <div class="checkbox checked">
+                            <span class="iconify checkmark" data-icon="topcoat:checkmark" data-inline="false"></span>
+                        </div>
+                        <span class="checkbox-text">
+                            Show grid
+                        </span>
+                    </div>
+                    <div class="checkbox-sec">
+                        <div class="checkbox checked">
+                            <span class="iconify checkmark" data-icon="topcoat:checkmark" data-inline="false"></span>
+                        </div>
+                        <span class="checkbox-text">
+                            Show axis
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

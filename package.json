@@ -1,0 +1,24 @@
+{
+  "name": "gdviewer",
+  "version": "1.0.0",
+  "description": "Allows you to view online Geometry Dash levels",
+  "main": "webpack.config.js",
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "css-loader": "^5.2.4",
+    "express": "^4.17.1",
+    "file-loader": "^6.2.0",
+    "http-server": "^0.12.3",
+    "pako": "^2.0.3",
+    "raw-loader": "^4.0.2",
+    "style-loader": "^2.0.0",
+    "webpack": "^5.36.1",
+    "webpack-cli": "^4.6.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "build": "webpack && node chtml.js"
+  },
+  "author": "IliasHDZ",
+  "license": "MIT"
+}
