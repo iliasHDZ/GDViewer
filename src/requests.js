@@ -1,4 +1,4 @@
-const hostname = "http://94.105.99.69:2000";
+const hostname = "http://94.105.99.69";
 const opts = {
     method: "GET"
 };
