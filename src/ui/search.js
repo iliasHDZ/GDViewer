@@ -107,8 +107,6 @@ export default function SearchUI(main, callback) {
 
         let close = util.div('search-closebox', util.iconify('fe:close', 'search-close'));
 
-        console.log(close);
-
         close.onclick = () => this.removeList();
 
         let content = util.div('search-content');
@@ -168,7 +166,7 @@ export default function SearchUI(main, callback) {
                     "Failed to search",
                     "Either the GD servers are very slow, a bad search query was typed in or the reroute server are currently disabled"
                 );
-                console.err(e);
+                console.error(e);
             });
     }
 }
