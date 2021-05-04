@@ -515,3 +515,75 @@ div.search-top {
     background-color: rgb(240, 240, 240);
     border-radius: 5px;
 }
+
+.search-error {
+    padding: 8px;
+
+    background-color: white;
+    border-radius: 10px;
+
+    max-height: 500px;
+
+    -webkit-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.16);
+    -moz-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.16);
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.16);
+
+    display: flex;
+    flex-direction: row;
+
+    margin-top: 8px;
+}
+
+.error-icon {
+    width: 40px;
+    height: 40px;
+
+    margin-left:  10px;
+    margin-right: 15px;
+    margin-top:   6px;
+
+    color: rgb(224, 14, 25);
+}
+
+.error-title {
+    color: rgb(54, 54, 54);
+    font-weight: 600;
+
+    margin-top:    16px;
+    margin-bottom: 10px;
+}
+
+.error-desc {
+    color: rgb(126, 126, 126);
+
+    font-size: 15px;
+}
+
+.error-button {
+    background-color: rgb(0, 170, 255);
+    padding: 8px 30px;
+    border-radius: 5px;
+    color: white;
+
+    font-weight: 600;
+    float: right;
+
+    margin-right:  10px;
+    margin-top:    10px;
+    margin-bottom: 5px;
+
+    cursor: pointer;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.error-button:hover {
+    background-color: rgb(0, 161, 241);
+}
+
+.error-button:active {
+    background-color: rgb(0, 150, 224);
+}

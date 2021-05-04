@@ -40,6 +40,11 @@ export default function SearchUI(main, callback) {
     }
 
     this.removeList = () => {
+        if (this.dot_anim) {
+            clearInterval(this.dot_anim);
+            this.dot_anim = null;
+        }
+
         if (this.section.childNodes.length == 2)
             this.section.removeChild(this.section.childNodes[1]);
     }
@@ -98,11 +103,6 @@ export default function SearchUI(main, callback) {
     }
 
     this.createList = (levels) => {
-        if (this.dot_anim) {
-            clearInterval(this.dot_anim);
-            this.dot_anim = null;
-        }
-
         this.removeList();
 
         let close = util.div('search-closebox', util.iconify('fe:close', 'search-close'));
@@ -124,6 +124,26 @@ export default function SearchUI(main, callback) {
         util.add(this.section, list);
     }
 
+    this.createError = (title, desc) => {
+        this.removeList();
+
+        let button = util.element('a', 'error-button', 'Ok');
+
+        button.onclick = () => this.removeList();
+
+        let error = util.div('search-error', [
+            util.div('error-left', 
+                util.iconify('bx:bxs-error-alt', 'error-icon') ),
+            util.div('error-info', [
+                util.element('p', 'error-title', title),
+                util.element('p', 'error-desc',  desc),
+                button
+            ])
+        ]);
+
+        util.add(this.section, error);
+    }
+
     this.searchStart = () => {
         let query = this.input.value.trim();
         if (query == "") return;
@@ -143,6 +163,12 @@ export default function SearchUI(main, callback) {
                 if (reqnum == search.reqcount)
                 this.createList(levels)
             })
-            .catch(console.err);
+            .catch((e) => {
+                this.createError(
+                    "Failed to search",
+                    "Either the GD servers are very slow, a bad search query was typed in or the reroute server are currently disabled"
+                );
+                console.err(e);
+            });
     }
 }

@@ -25,9 +25,15 @@
                     <span class="iconify search-glass searchbar-button" data-icon="fa-solid:search" data-inline="false"></span>
                 </div>
             </div>
-            <div class="search-list">
-                <p class="loading-title">Waiting for a response...</p>
-                <p class="loading-desc">Waiting for the GD servers to respond. This could take a while.</p>
+            <div class="search-error">
+                <div class="error-left">
+                    <span class="iconify error-icon" data-icon="bx:bxs-error-alt" data-inline="false"></span>
+                </div>
+                <div class="error-info">
+                    <p class="error-title">Failed to search</p>
+                    <p class="error-desc">Either the GD servers are very slow, a bad search query was typed in or the reroute server are currently disabled</p>
+                    <a class="error-button">Ok</a>
+                </div>
             </div>
         </div>
         <div class="info-section">
