@@ -15,6 +15,30 @@ export function EditorLevel(renderer, level) {
     this.reloadColorTrgs = [];
     this.reloadSpeeds    = false;
     this.reloadCTriggers = false;
+    
+    /**
+     * This interpolates the 2 color components depending on the `blend` value
+     * @param {number} c1 color component 1
+     * @param {number} c2 color component 2
+     * @param {number} blend blend amount `0 - 1`
+     * @returns result blend
+     */
+     this.blendComp = (c1, c2, blend) => {
+        return c1 * (1-blend) + c2 * blend;
+    }
+    /**
+     * This interpolates the 2 color values depending on the `blend` value
+     * @param {{r: number, g: number, b: number}} col1 color value 1
+     * @param {{r: number, g: number, b: number}} col2 color value 2
+     * @param {number} blend blend amount `0 - 1`
+     * @returns result blend
+     */
+    this.blendColor = (col1, col2, blend) => {
+        let ret = {r: this.blendComp(col1.r, col2.r, blend), b: this.blendComp(col1.b, col2.b, blend), g: this.blendComp(col1.g, col2.g, blend)};
+        if (col1.a) ret.a = this.blendComp(col1.a, col2.a, blend);
+
+        return ret;
+    }
 
     this.getObject = function(i) {
         return this.level.data[i];
@@ -46,46 +70,67 @@ export function EditorLevel(renderer, level) {
         this.level.sps = sps;
     }
 
+    this.pickColor = (o) => {
+        return { r: o.r / 255, g: o.g / 255, b: o.b / 255, a: o.a };
+    }
+
+    this.pickColorFromTrigger = (o) => {
+        return { r: o.red / 255, g: o.green / 255, b: o.blue / 255, a: o.opacity || 1 };
+    }
+
+    this.calColorFrom = (pX, pColor, pDuration, nX, nColor, lol) => {
+        let pSec = util.xToSec(this.level, pX);
+        let dSec = pSec + pDuration;
+
+        let nSec = util.xToSec(this.level, nX);
+        let minmax = (n) => Math.min(Math.max(n, 0), 1);
+
+        if (lol) console.log(pSec, dSec, nSec);
+
+        return this.blendColor(pColor, nColor,
+            minmax( (nSec - pSec) / pDuration ) );
+    }
+
     this.loadCTriggers = function(color) {
-        let level  = this.level;
+        let level = this.level;
+        let base  = level.info.colors.filter(f => f.channel == color);
 
-        let objs   = level.data;
-        let ctriggers = [];
+        let data  = level.data;
 
-        let base   = level.info.colors.filter(f => f.channel == color);
-
-        if (base.length > 0) base = base[0]
-        else base = {r: 255, g: 255, b: 255, a: 255};
-
-        objs.forEach((obj, i) => {
-            if (obj.type == "trigger" &&
-                obj.info == "color" &&
-                (obj.color || 1) == color)
-                ctriggers.push(i);
-        });
-
-        ctriggers.sort( (a, b) => objs[a].x - objs[b].x );
-
-        let pcol = {r: base.r, g: base.g, b: base.b};
-        let ccol = pcol;
-
-        let csec = -100000;
-        let cdur = 0;
-
-        for (let i of ctriggers) {
-            let obj   = objs[i];
-            let delta = util.xToSec(level, obj.x) - csec;
-
-            pcol =  util.blendColor(pcol, ccol, Math.min(delta / cdur, 1));
-            ccol =  util.longToShortCol(obj);
-
-            csec += delta;
-            cdur =  obj.duration;
-
-            obj.curCol = pcol;
+        if (base.length > 0) {
+            base = base[0];
+            base.a = +base.alpha;
         }
+        else base = {r: 255, g: 255, b: 255, a: 1};
+
+        let trgs = [];
+
+        for (let [k, v] of Object.entries(data))
+            if (v.type == 'trigger' &&
+                v.info == 'color' &&
+                util.getColorTriggerChannel(v) == color)
+                trgs.push(k);
         
-        this.level.cts[color] = ctriggers;
+        trgs.sort( (a, b) => data[a].x - data[b].x );
+
+        let pX        = -1000000000;
+        let pColor    = this.pickColor(base);
+        let pDuration = 0;
+        
+        let nColor    = pColor;
+
+        for (let k of trgs) {
+            let o = data[k];
+            o.curCol = this.calColorFrom(pX, pColor, pDuration, +o.x, nColor, color == 1000);
+
+            pX        = +o.x;
+            pDuration = +o.duration;
+            pColor    = o.curCol;
+
+            nColor    = this.pickColorFromTrigger(o);
+        }
+
+        this.level.cts[color] = trgs;
     }
 
     this.removeObjectZList = function(key, chunkn, layern) {
@@ -163,7 +208,7 @@ export function EditorLevel(renderer, level) {
             } else
                 this.addColorT(obj.color);
         }
-        if (util.getSpeedPortal(obj))
+        if (util.getSpeedPortal(obj) != null)
             this.reloadSpeeds = true;
 
         for (var prop in props) {
@@ -192,18 +237,16 @@ export function EditorLevel(renderer, level) {
         this.orderSortLog = [];
         this.reloadColorTrgs = [];
 
-        //utilscript.setUnsavedChanges(true);
+        utilscript.setUnsavedChanges(true);
     }
 
-    this.getObjectRect = function(obj, scale) {
+    this.getObjectDimensions = function(obj) {
         let def = this.renderer.objectDefs[obj.id];
 
         if (!def)
             return {
-                left: parseFloat(obj.x),
-                right: parseFloat(obj.x),
-                top: parseFloat(obj.y),
-                bottom: parseFloat(obj.y)
+                width:  0,
+                height: 0
             };
 
         let texture;
@@ -219,38 +262,119 @@ export function EditorLevel(renderer, level) {
 
         if (!texture)
             return {
-                left: parseFloat(obj.x),
-                right: parseFloat(obj.x),
-                top: parseFloat(obj.y),
-                bottom: parseFloat(obj.y)
+                width:  0,
+                height: 0
             };
 
-        let width  = texture.w / 62 * 30 * scale;
-        let height = texture.h / 62 * 30 * scale;
+        return {
+            width:  texture.w / 62 * 30 * (+obj.scale || 1),
+            height: texture.h / 62 * 30 * (+obj.scale || 1)
+        }
+    }
+
+    this.getObjectRect = function(obj) {
+        let dim = this.getObjectDimensions(obj);
 
         return {
-            left:   parseFloat(obj.x) - width/2,
-            right:  parseFloat(obj.x) + width/2,
-            top:    parseFloat(obj.y) + height/2,
-            bottom: parseFloat(obj.y) - height/2
+            left:   +obj.x - dim.width/2,
+            right:  +obj.x + dim.width/2,
+            top:    +obj.y + dim.height/2,
+            bottom: +obj.y - dim.height/2
         };
     }
 
     this.isInObject = function(key, x, y) {
         let obj = this.getObject(key);
-        let r = this.getObjectRect(obj, +obj.scale || 1);
+        let r = this.getObjectRect(obj);
 
         /* TODO: Support for rotated objects */
 
         return x >= r.left && x <= r.right && y <= r.top && y >= r.bottom;
     }
 
+    this.rotatePoint = function(cosRot, sinRot, point) {
+        return {
+            x: point[0] * cosRot + point[1] * sinRot,
+            y: -(point[0] * sinRot) + point[1] * cosRot
+        };
+    }
+
+    this.invertRotatePoint = function(cosRot, sinRot, point) {
+        return {
+            x: point[0] * cosRot - point[1] * sinRot,
+            y: point[0] * sinRot + point[1] * cosRot
+        };
+    }
+
+    this.rotatePointAroundOrigin = function(cosRot, sinRot, origin, point) {
+        let ret = this.rotatePoint(cosRot, sinRot, [point[0] - origin[0], point[1] - origin[1]]);
+
+        ret.x += origin[0];
+        ret.y += origin[1];
+        
+        return ret;
+    }
+
+    this.invertRotatePointAroundOrigin = function(cosRot, sinRot, origin, point) {
+        let ret = this.invertRotatePoint(cosRot, sinRot, [point[0] - origin[0], point[1] - origin[1]]);
+
+        ret.x += origin[0];
+        ret.y += origin[1];
+        
+        return ret;
+    }
+
+    this.objRectPoints = function(cosRot, sinRot, obj) {
+        let dim = this.getObjectDimensions(obj);
+        dim = {width: dim.width / 2, height: dim.height / 2};
+        return [
+            this.rotatePointAroundOrigin(cosRot, sinRot, [+obj.x, +obj.y], [
+                +obj.x - dim.width,
+                +obj.y - dim.height
+            ]),
+            this.rotatePointAroundOrigin(cosRot, sinRot, [+obj.x, +obj.y], [
+                +obj.x + dim.width,
+                +obj.y - dim.height
+            ]),
+            this.rotatePointAroundOrigin(cosRot, sinRot, [+obj.x, +obj.y], [
+                +obj.x - dim.width,
+                +obj.y + dim.height
+            ]),
+            this.rotatePointAroundOrigin(cosRot, sinRot, [+obj.x, +obj.y], [
+                +obj.x + dim.width,
+                +obj.y + dim.height
+            ])
+        ];
+    }
+
     this.collidesWithObject = function(key, box) {
         let obj = this.getObject(key);
-        let r = this.getObjectRect(obj, +obj.scale || 1);
+        let r = this.getObjectRect(obj);
 
-        return box.right >= r.left && box.left <= r.right &&
-               box.top >= r.bottom && box.bottom <= r.top;
+        let cosRot = Math.cos((+obj.r || 0) / 180 * Math.PI);
+        let sinRot = Math.sin((+obj.r || 0) / 180 * Math.PI);
+
+        let points = this.objRectPoints(cosRot, sinRot, obj);
+
+        for (let p of points)
+            if (p.x >= box.left   && p.x <= box.right &&
+                p.y >= box.bottom && p.y <= box.top) return true;
+
+        let selectPoint = [
+            [box.left, box.top],
+            [box.right, box.top],
+            [box.left, box.bottom],
+            [box.right, box.bottom]
+        ];
+
+        for (let i = 0; i < 4; i++)
+            selectPoint[i] = this.invertRotatePointAroundOrigin(cosRot, sinRot, [+obj.x, +obj.y], selectPoint[i]);
+
+        for (let p of selectPoint)
+            if (p.x >= r.left   && p.x <= r.right &&
+                p.y >= r.bottom && p.y <= r.top) return true;
+
+        return false;
     }
 
     this.getObjectsAt = function(x, y) {
@@ -261,6 +385,58 @@ export function EditorLevel(renderer, level) {
                   objs.push(i);
 
         return objs;
+    }
+
+    this.compareArray = function(a1, a2) {
+        if (a1.length != a2.length) return false;
+        for (let i of a1) if (!a2.includes(i)) return false;
+        return true;
+    }
+
+    this.cycleObjects = [];
+    this.cycleIndex   = 0;
+
+    this.cycleObjectAt = function(x, y) {
+        let objs = this.getObjectsAt(x, y);
+
+        if (objs.length == 0) return null;
+
+        objs.sort((a, b) => {
+            let o1 = this.level.data[a];
+            let o2 = this.level.data[b];
+
+            let l1 = o1.z;
+            let l2 = o2.z;
+
+            if (!l1) l1 = renderer.objectDefs[o1.id].zlayer;
+            if (!l2) l2 = renderer.objectDefs[o2.id].zlayer;
+
+            let delta = l1 - l2;
+            if (delta != 0) return delta;
+
+            let z1 = o1.zorder;
+            let z2 = o2.zorder;
+
+            if (!z1) z1 = renderer.objectDefs[o1.id].zorder;
+            if (!z2) z2 = renderer.objectDefs[o2.id].zorder;
+
+            return z1 - z2;
+        });
+        objs.reverse();
+
+        if (this.cycleObjects.length == 0) {
+            this.cycleObjects = objs;
+            this.cycleIndex   = 0;
+        } else
+            if (this.compareArray(objs, this.cycleObjects)) {
+                this.cycleIndex++;
+                if(this.cycleIndex >= this.cycleObjects.length) this.cycleIndex = 0;
+            } else {
+                this.cycleObjects = objs;
+                this.cycleIndex   = 0;
+            }
+
+        return this.cycleObjects[this.cycleIndex];
     }
 
     this.getObjectsIn = function(rect) {
@@ -298,6 +474,9 @@ export function EditorLevel(renderer, level) {
             chunk = {};
         }
 
+        if (util.getSpeedPortal(obj) != null)
+            this.reloadSpeeds = true;
+
         let layer = chunk[obj.z];
 
         if (layer) {
@@ -311,7 +490,7 @@ export function EditorLevel(renderer, level) {
 
     this.createObject = function(id, x = 0, y = 0, grid_align = false) {
         let def = renderer.objectDefs[id];
-        /*if (grid_align) {
+        if (grid_align) {
             let alg = aligns[id];
             if (alg) {
                 if (alg.alignX == "left")
@@ -328,7 +507,7 @@ export function EditorLevel(renderer, level) {
                 else if (alg.alignY != "center")
                     y = y + alg.alignY;
             }
-        }*/
+        }
         let ret = {id: id, x: x, y: y, z: def.zlayer, zorder: def.zorder};
 
         return ret;
@@ -358,7 +537,7 @@ export function EditorLevel(renderer, level) {
         if (obj.type == "trigger" && obj.info == "color")
             this.loadCTriggers(parseInt(obj.color));
 
-        if (util.getSpeedPortal(obj))
+        if (util.getSpeedPortal(obj) != null)
             this.reloadSpeeds = true;
     }
 

@@ -240,6 +240,24 @@ export const util = {
             return 4;
         return null;
     },
+    getColorTriggerChannel: function (obj) {
+        if (obj.type != 'trigger' || obj.info != 'color') return null;
+        if (obj.color) return obj.color;
+
+        switch (obj.id) {
+            case 29:  return 1000;
+            case 30:  return 1001;
+            case 104: return 1002;
+            case 105: return 1004;
+            case 221: return 1;
+            case 717: return 2;
+            case 718: return 3;
+            case 743: return 4;
+            case 744: return 1003;
+        }
+
+        return 1;
+    },
     ups: {
         [0]: 258,
         [1]: 312,
@@ -262,21 +280,21 @@ export const util = {
      * @returns {number} the time to get to the x position in seconds.
      */
     xToSec: function(level, x) {
-        var resSP = null;
-        var lspd = null;
-        lspd = parseInt((level.info.speed === undefined) ? 1 : (level.info.speed + 1));
-        for (var i of level.sps) {
-            let sp = level.data[i];
-            if (parseFloat(sp.x) >= parseFloat(x))
-                break;
-            resSP = sp;
+        let base = (+level.info.speed || 0) + 1;
+        let portal;
+
+        for (let k of level.sps) {
+            let sp = level.data[k];
+
+            if (+sp.x >= +x) break;
+            portal = sp;
         }
-        if (resSP != null) {
-            var speed = null;
-            speed = this.getSpeedPortal(resSP);
-            return resSP.secx + (x - resSP.x) / parseFloat(this.ups[speed]);
-        } else
-            return parseFloat(x) / parseFloat(this.ups[lspd]);
+
+        if (!portal) return +x / this.ups[base];
+        else {
+            let spd = this.getSpeedPortal(portal);
+            return portal.secx + (x - +portal.x) / this.ups[spd];
+        }
     },
     /**
      * This function takes in a level and time in seconds and returns the x position
@@ -333,8 +351,27 @@ export const util = {
      * @param {{red : number, green : number, blue : number}} col the long color object
      * @returns {{r : number, g : number, b : number}} col the long color object
      */
-    longToShortCol(col) {
+    longToShortCol: (col) => {
         return {r: parseFloat(col.red), g: parseFloat(col.green), b: parseFloat(col.blue)};
+    },
+
+    pickColor: (o) => {
+        return { r: o.r / 255, g: o.g / 255, b: o.b / 255 };
+    },
+
+    pickColorFromTrigger: (o) => {
+        return { r: o.red / 255, g: o.green / 255, b: o.blue / 255, a: o.opacity || 1 };
+    },
+
+    calColorFrom: function (level, pX, pColor, pDuration, nX, nColor) {
+        let pSec = this.xToSec(level, pX);
+        let dSec = pSec + pDuration;
+
+        let nSec = this.xToSec(level, nX);
+        let minmax = (n) => Math.min(Math.max(n, 0), 1);
+
+        return this.blendColor(pColor, nColor,
+            minmax( (nSec - pSec) / pDuration ) );
     },
     /**
      * Takes in the level, a x position and a color id and calculates the color
@@ -345,30 +382,22 @@ export const util = {
      * @returns {{r : number, g : number, b : number}}
      */
     xToCOL: function(level, x, col) {
-        var resCOL = null;
-        if (level.cts[col] != undefined) {
-            for (let i of level.cts[col]) {
-                let colo = level.data[i];
-                if (colo.x >= x)
-                    break;
-                resCOL = colo;
-            }
-        }
-        if (resCOL != null) {
-            var delta = this.xToSec(level, x, true) - this.xToSec(level, resCOL.x);
-            if (delta < parseFloat(resCOL.duration)) {
-                return this.blendColor(resCOL.curCol, this.longToShortCol(resCOL), delta / resCOL.duration);
-            } else
-                return this.longToShortCol(resCOL);
-        } else {
-            var baseColor = level.info.colors.filter((f) => {return f.channel == col;});
-            if (baseColor.length > 0) {
-                baseColor = baseColor[0];
+        let trigger;
+        let base = level.info.colors.filter((f) => f.channel == col);
 
-                return {r: baseColor.r, g: baseColor.g, b: baseColor.b};
-            } else
-                return {r: 255, g: 255, b: 255}
-        }
+        if (base.length > 0) base = this.pickColor(base[0]);
+        else base = {r: 1, g: 1, b: 1, a: 1};
+
+        if (level.cts[col])
+            for (let k of level.cts[col]) {
+                let trg = level.data[k];
+
+                if (+trg.x >= x) break;
+                trigger = trg;
+            }
+
+        if (trigger) return this.calColorFrom(level, +trigger.x, trigger.curCol, +trigger.duration, x, this.pickColorFromTrigger(trigger));
+        else return base;
     },
     /**
      * I think this one calculates a background color value
@@ -429,7 +458,10 @@ export const util = {
      * @returns result blend
      */
     blendColor: function(col1, col2, blend) {
-        return {r: this.blendComp(col1.r, col2.r, blend), b: this.blendComp(col1.b, col2.b, blend), g: this.blendComp(col1.g, col2.g, blend)};
+        let ret = {r: this.blendComp(col1.r, col2.r, blend), b: this.blendComp(col1.b, col2.b, blend), g: this.blendComp(col1.g, col2.g, blend)};
+        if (col1.a) ret.a = this.blendComp(col1.a, col2.a, blend);
+
+        return ret;
     },
     /**
      * This function loads all the color triggers from a specific color id so that each
@@ -727,9 +759,10 @@ export function GDRenderer(gl, loaded_callback = null) {
             if (this.colors[color])
                 return this.colors[color];
 
-            this.colors[color] = util.toOne(util.xToCOL(renderer.level, renderer.camera.x, color));
-            this.colors[color].a = 1;
+            this.colors[color] = util.xToCOL(renderer.level, renderer.camera.x, color);
+            if (!this.colors[color].a) this.colors[color].a = 1;
             monitor.endCategory("Color calculation");
+
             return this.colors[color];
         }
     }
@@ -876,7 +909,7 @@ export function GDRenderer(gl, loaded_callback = null) {
     this.renderRect = (x, y, width, height, tint = {r: 1, g: 1, b: 1, a: 1}, toCamera = false) => {
         let gl = this.gl;
 
-        gl.uniform1i(gl.getUniformLocation(this.gProg, "render_line"), 1);
+        gl.uniform1i(gl.getUniformLocation(this.gProg, "type"), 1);
         
         if (toCamera)
             util.setCamera(this);
@@ -891,7 +924,7 @@ export function GDRenderer(gl, loaded_callback = null) {
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        gl.uniform1i(gl.getUniformLocation(this.gProg, "render_line"), 0);
+        gl.uniform1i(gl.getUniformLocation(this.gProg, "type"), 0);
     }
 
     /**
@@ -905,7 +938,7 @@ export function GDRenderer(gl, loaded_callback = null) {
     this.renderLine = (x, vertical, tint = {r: 1, g: 1, b: 1, a: 1}, width = 1, toCamera = false) => {
         let gl = this.gl;
 
-        gl.uniform1i(gl.getUniformLocation(this.gProg, "render_line"), 1);
+        gl.uniform1i(gl.getUniformLocation(this.gProg, "type"), 1);
         
         if (!toCamera)
             util.setCamera(this, 0, 0);
@@ -929,11 +962,12 @@ export function GDRenderer(gl, loaded_callback = null) {
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        gl.uniform1i(gl.getUniformLocation(this.gProg, "render_line"), 0);
+        gl.uniform1i(gl.getUniformLocation(this.gProg, "type"), 0);
     };
 
     this.renderText = (text, x, y, font, scale = 0.5, tint = {r: 1, g: 1, b: 1, a: 1}, toCamera = true, centered = true) => {
         let gl = this.gl;
+        text = text + '';
 
         if (toCamera)
             util.setCamera(this);
@@ -1007,7 +1041,12 @@ export function GDRenderer(gl, loaded_callback = null) {
         util.setTint(this, tint);
         util.setTexture(this, tex);
 
+        if (tint.i)
+            gl.uniform1i(gl.getUniformLocation(this.gProg, "type"), 2);
+
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        gl.uniform1i(gl.getUniformLocation(this.gProg, "type"), 0);
     }
 
     /**
@@ -1017,6 +1056,7 @@ export function GDRenderer(gl, loaded_callback = null) {
      * @returns 
      */
     this.renderObject = (obj, key = -1) => {
+        if(!obj) return;
         var def = this.objectDefs[obj.id];
 
         if (!def && obj.type != "text")
@@ -1046,6 +1086,8 @@ export function GDRenderer(gl, loaded_callback = null) {
             if (cld[key]) {
                 maincol = this.cache.getColor(this, cld[key].base || maincol);
                 seccol  = this.cache.getColor(this, cld[key].decor || seccol);
+
+                if (cld[key].base) def_tint = maincol;
             }
         }
 
@@ -1070,17 +1112,33 @@ export function GDRenderer(gl, loaded_callback = null) {
 
         if (obj.type == "trigger") {
             switch (obj.info) {
-                case "color":
-                    text = util.color_names[+obj.color] || obj.color; break;
-                case "toggle":
-                case "touch":   
-                case "pulse":  
-                case "stop":
-                case "spawn":
-                case "follow":
-                case "alpha":
-                case "animate":
-                    text = obj.targetGroupID; break;
+            case "color":
+                let color = obj.color;
+
+                if (!color) {
+                    if (obj.id == 899) color = 1;
+                    else
+                        switch (obj.id) {
+                        case 221: color = 1; break;
+                        case 717: color = 2; break;
+                        case 718: color = 3; break;
+                        case 743: color = 4; break;
+                        }
+                }
+
+                if (color)
+                    text = util.color_names[color] || color;
+                break;
+
+            case "toggle":
+            case "touch":
+            case "pulse":
+            case "stop":
+            case "spawn":
+            case "follow":
+            case "alpha":
+            case "animate":
+                text = obj.targetGroupID; break;
             }
         }
 
@@ -1318,9 +1376,7 @@ export function GDRenderer(gl, loaded_callback = null) {
                 this.renderLine(x, true, BLACK, WIDTH, true);
             for (let y = Math.floor(y1/BLOCK) * BLOCK; y <= Math.floor(y2/BLOCK) * BLOCK; y+=BLOCK)
                 this.renderLine(y, false, BLACK, WIDTH, true);
-        }
 
-        if (options.axis) {
             this.renderLine(0, true, {r: 0, g: 0.6, b: 0, a: 1}, 1.5, true);
 
             let bx = Math.max( 0, this.cache.camX1 );
@@ -1328,13 +1384,11 @@ export function GDRenderer(gl, loaded_callback = null) {
 
             this.renderRect(bx + (ex - bx) / 2, 0, ex - bx, 1.5 / this.camera.zoom, {r: 1, g: 1, b: 1, a: 1}, true);
         }
-        
         monitor.endCategory("Grid rendering");
 
-        if (options.guideline)
-            if (this.level.info.guidelines)
-                for (let gl of this.level.info.guidelines)
-                    this.renderLine(util.secToX(this.level, gl.timestamp), true, util.guidelineColor(gl.color), 1, true);
+        if (this.level.info.guidelines)
+            for (let gl of this.level.info.guidelines)
+                this.renderLine(util.secToX(this.level, gl.timestamp), true, util.guidelineColor(gl.color), 1, true);
 
         if (!this.mainT.loaded) {
             monitor.endFrame(false);

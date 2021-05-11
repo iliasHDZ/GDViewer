@@ -148,8 +148,6 @@ export default function MainUI(body, head) {
 
                 cam.x -= e.movementX / cam.zoom;
                 cam.y -= e.movementY / cam.zoom;
-
-                console.log(cam.x, cam.y);
             }
         }
 
