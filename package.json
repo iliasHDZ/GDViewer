@@ -11,6 +11,7 @@
     "http-server": "^0.12.3",
     "pako": "^2.0.3",
     "raw-loader": "^4.0.2",
+    "requests": "^0.3.0",
     "style-loader": "^2.0.0",
     "webpack": "^5.36.1",
     "webpack-cli": "^4.6.0"

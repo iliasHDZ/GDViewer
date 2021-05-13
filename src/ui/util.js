@@ -49,6 +49,10 @@ util = {
             return ret;
         }
     },
+    a: (href, classes = [], text = "", opts = {}) => {
+        return util.element('a', classes, text, 
+            Object.assign({"href": href}, opts) );
+    },
     div: (classes = [], children = [], opts = {}) => {
         return util.element('div', classes, children, opts );
     },

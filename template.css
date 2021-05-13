@@ -586,3 +586,54 @@ div.search-top {
 .error-button:active {
     background-color: rgb(0, 150, 224);
 }
+
+.loading-screen {
+    background-color: #3a3a3a;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.loading-container {
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+
+    text-align: center;
+}
+
+.loading-text {
+    color: white;
+    font-weight: 600;
+    font-size:   30px;
+}
+
+.loading-subtext {
+    color: rgb(209, 209, 209);
+    font-weight: 600;
+    font-size:   20px;
+}
+
+.footer-section {
+    margin: 0;
+
+    position: absolute;
+    bottom: 10px;
+    right:  10px;
+
+    color: #d8d8d8;
+
+    font-size: 14px;
+}
+
+.footer-link {
+    text-decoration: none;
+    color: #d8d8d8;
+}
+
+.footer-link:hover {
+    text-decoration: underline;
+}

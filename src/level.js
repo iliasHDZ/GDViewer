@@ -78,14 +78,12 @@ export function EditorLevel(renderer, level) {
         return { r: o.red / 255, g: o.green / 255, b: o.blue / 255, a: o.opacity || 1 };
     }
 
-    this.calColorFrom = (pX, pColor, pDuration, nX, nColor, lol) => {
+    this.calColorFrom = (pX, pColor, pDuration, nX, nColor) => {
         let pSec = util.xToSec(this.level, pX);
         let dSec = pSec + pDuration;
 
         let nSec = util.xToSec(this.level, nX);
         let minmax = (n) => Math.min(Math.max(n, 0), 1);
-
-        if (lol) console.log(pSec, dSec, nSec);
 
         return this.blendColor(pColor, nColor,
             minmax( (nSec - pSec) / pDuration ) );
@@ -121,7 +119,7 @@ export function EditorLevel(renderer, level) {
 
         for (let k of trgs) {
             let o = data[k];
-            o.curCol = this.calColorFrom(pX, pColor, pDuration, +o.x, nColor, color == 1000);
+            o.curCol = this.calColorFrom(pX, pColor, pDuration, +o.x, nColor);
 
             pX        = +o.x;
             pDuration = +o.duration;
