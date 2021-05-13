@@ -129,7 +129,7 @@ export default function MainUI(body, head) {
             " - MIT License - By ",
             util.a('https://github.com/IliasHDZ', 'footer-link', "IliasHDZ", {target: '_blank'}),
             " - UI Design By ",
-            util.a('https://github.com/Altenhh', 'footer-link', "Laica", {target: '_blank'}),
+            util.a('https://fasner.io/Laica', 'footer-link', "Laica", {target: '_blank'}),
         ]);
 
         util.add(this.mainui, this.footer);
