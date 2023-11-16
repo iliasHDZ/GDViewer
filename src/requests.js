@@ -1,5 +1,5 @@
 const hostname = "https://gdbrowser.com";
-const proxy    = "http://213.219.189.163";
+const proxy    = "";
 const opts = {
     method: "GET"
 };
@@ -39,4 +39,7 @@ export default {
                 .catch(reject);
         });
     },
+    resolvePath: (path) => {
+        return proxy + path;
+    }
 }

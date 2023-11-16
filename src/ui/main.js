@@ -1,19 +1,14 @@
 import util from './util'
-import {GDRenderer} from './../GDRenderW/main'
-
-import {EditorLevel} from './../level'
-import parser from './../levelparse'
-
-import levelcode from './../startup.gmd'
+import {Renderer, GDLevel, WebGLContext, Vec2} from 'gdrweb'
 
 import SearchUI from './search'
 import InfoUI   from './info'
 
 import requests from './../requests'
 
-import pako from 'pako'
+import startup from '../startup.json'
 
-const Buffer = require('buffer/').Buffer;
+import pako from 'pako'
 
 export default function MainUI(body, head) {
     this.body = body;
@@ -21,6 +16,10 @@ export default function MainUI(body, head) {
 
     this.canvas;
     this.renderer;
+
+    this.playSection = null;
+    this.playing = false;
+    this.audio = null;
 
     this.panning = false;
 
@@ -31,10 +30,7 @@ export default function MainUI(body, head) {
     this.faces = {};
 
     this.options = {
-        antialias:  false,
-        grid:       true,
-        axis:       true,
-        guidelines: true
+        hideTriggers: false
     };
 
     this.preloadFaces = () => {
@@ -60,27 +56,46 @@ export default function MainUI(body, head) {
         this.canvas.width  = window.innerWidth;
         this.canvas.height = window.innerHeight;
 
-        this.renderer.renderLevel(
-            this.level,
-            this.canvas.width,
-            this.canvas.height,
-            this.options
-        );
+        this.renderer.render(this.level, this.options);
     }
 
-    this.decodeLevel = (data) => {
-        let decoded = Buffer.from(data, 'base64');
-        return new TextDecoder("utf-8").decode(pako.ungzip(decoded));
+    this.isCanvasUpdating = false;
+    this.shouldCanvasUpdate = false;
+
+    const updateCallback = () => {
+        this.isCanvasUpdating = true;
+
+        if (this.shouldCanvasUpdate)
+            this.updateCanvas();
+        this.shouldCanvasUpdate = false;
+        requestAnimationFrame(updateCallback);
     }
+
+    this.requestCanvasUpdate = () => {
+        this.shouldCanvasUpdate = true;
+        
+        if (!this.isCanvasUpdating)
+            requestAnimationFrame(updateCallback);
+    }
+
+    this.loadingLevel = false;
 
     this.loadLevel = (level) => {
-        this.level = new EditorLevel(
-            this.renderer,
-            parser.code2object(this.decodeLevel(level.data))
-        );
+        if (this.playing)
+            this.stopLevel();
+
+        if (this.loadingLevel)
+            return;
+
+        this.loadingLevel = true;
+
+        this.level = GDLevel.fromBase64String(this.renderer, level.data);
+        this.levelInfo = level;
+
+        this.audio = null;
 
         this.renderer.camera.x    = 400;
-        this.renderer.camera.y    = -200;
+        this.renderer.camera.y    = 200;
         this.renderer.camera.zoom = 1;
         this.updateCanvas();
 
@@ -97,6 +112,7 @@ export default function MainUI(body, head) {
             });
 
         this.levelLoaded();
+        this.loadingLevel = false;
     };
 
     this.loading_screen = null;
@@ -123,16 +139,106 @@ export default function MainUI(body, head) {
 
     this.generateFooter = function() {
         this.footer = util.element('p', 'footer-section', [
-            util.a('https://gdviewers.tk', 'footer-link', "GDViewer", {target: '_blank'}),
-            " - ",
-            util.a('https://github.com/IliasHDZ/GDViewer', 'footer-link', "GitHub", {target: '_blank'}),
-            " - MIT License - By ",
+            util.a('https://github.com/IliasHDZ/GDViewer', 'footer-link', "GDViewer", {target: '_blank'}),
+            " - Powered by ",
+            util.a('https://github.com/IliasHDZ/GDRWeb', 'footer-link', "GDRWeb", {target: '_blank'}),
+            " - Created by ",
             util.a('https://github.com/IliasHDZ', 'footer-link', "IliasHDZ", {target: '_blank'}),
-            " - UI Design By ",
-            util.a('https://fasner.io/Laica', 'footer-link', "Laica", {target: '_blank'}),
+            " - UI Design By Nora",
         ]);
 
         util.add(this.mainui, this.footer);
+    }
+
+    this.loadAudio = function() {
+        if (!this.levelInfo || typeof(this.levelInfo.customSong) != 'number' || this.levelInfo.customSong == 0)
+            return;
+
+        const level = this;
+        return new Promise((resolve, _) => {
+            const audio = new Audio(requests.resolvePath(`/getsong/${this.levelInfo.customSong}.mp3`));
+
+            audio.addEventListener('canplaythrough', () => {
+                audio.volume = 0.3;
+                level.audio = audio;
+                resolve();
+            });
+
+            audio.onerror = () => {
+                resolve();
+            }
+        });   
+    }
+
+    this.setPlayLoad = (v) => {
+        this.playButton.style.display = v ? 'none' : '';
+        this.playLoader.style.display = v ? '' : 'none';
+    }
+
+    this.playLevel = async function() {
+        if (this.audio == null) {
+            this.setPlayLoad(true);
+            await this.loadAudio();
+        }
+
+        this.setPlayLoad(false);
+
+        if (this.audio == null)
+            return;
+
+        this.audio.currentTime = this.level.song_offset + this.level.timeAt(this.renderer.camera.x);
+        this.audio.play();
+
+        this.playing = true;
+        const level = this;
+        const update = () => {
+            if (level.playing)
+                window.requestAnimationFrame(update);    
+
+            level.renderer.camera.x = level.level.posAt(level.audio.currentTime - level.level.song_offset);
+            this.requestCanvasUpdate();
+        }
+        
+        this.playMusicIcon.style.display = 'none';
+        this.playStopIcon.style.display  = '';
+
+        update();
+    }
+
+    this.stopLevel = async function() {
+        this.playing = false;
+        if (this.audio != null)
+            this.audio.pause();
+        
+        this.playMusicIcon.style.display = '';
+        this.playStopIcon.style.display  = 'none';
+    }
+
+    this.playButtonPress = async function() {
+        if (this.playing)
+            await this.stopLevel();
+        else
+            await this.playLevel();
+    }
+
+    this.generatePlayButton = function() {
+        this.playMusicIcon = util.div('play-music', util.iconify('fa-solid:music', ['play-button', 'play-icon']));
+        this.playStopIcon  = util.div('play-stop', util.iconify('fa-solid:stop', ['play-button', 'play-icon']), {style: 'display: none;'});
+        this.playLoader    = util.div('play-loader', [], {style: 'display: none;'});
+
+        this.playButton = util.div('play-button', [
+            this.playMusicIcon,
+            this.playStopIcon
+        ]);
+
+        this.playSection = util.div('play-section', [
+            this.playButton,
+            this.playLoader
+        ]);
+
+        this.playButton.onclick = () => this.playButtonPress();
+
+        util.add(this.mainui, this.playSection);
     }
 
     this.assets_done = false;
@@ -150,7 +256,9 @@ export default function MainUI(body, head) {
         if (this.assets_done && this.level_done) this.closeLoadingScreen();
     }
 
-    this.init = () => {
+    this.searchLevelLoading = false;
+
+    this.init = async () => {
         this.canvas  = util.element('canvas');
 
         this.mainui  = util.element('div', 'main-ui',
@@ -158,19 +266,24 @@ export default function MainUI(body, head) {
 
         util.add(this.body, this.mainui);
 
-        let gl = this.canvas.getContext('webgl', {antialias: false});
+        await Renderer.initTextureInfo(
+            "../assets/GJ_GameSheet-hd.plist",
+            "../assets/GJ_GameSheet02-hd.plist"
+        );
 
-        this.renderer = new GDRenderer(gl, (r) => {
-            if (r.loaded) {
-                this.updateCanvas();
-                this.assetsLoaded();
-            }
-        });
+        this.renderer = new Renderer(
+            new WebGLContext(this.canvas), 
+            "../assets/GJ_GameSheet-hd.png",
+            "../assets/GJ_GameSheet02-hd.png"
+        );
+        
+        await this.renderer.loadBackgrounds(name => `../assets/backgrounds/${name}.png`);
+        await this.renderer.loadGrounds(name => `../assets/grounds/${name}.png`);
 
-        this.renderer.camera.x = 660;
-        this.renderer.camera.y = -100;
+        this.renderer.camera.x = 610;
+        this.renderer.camera.y = 275;
 
-        if (typeof URL_EMBED !== 'undefined') {
+        /*if (typeof URL_EMBED !== 'undefined') {
             let params = new URLSearchParams(window.location.search);
 
             console.log(params.get('levelid'));
@@ -197,15 +310,14 @@ export default function MainUI(body, head) {
                 this.updateCanvas();
             }
         } else {
-            this.level = new EditorLevel(
-                this.renderer,
-                parser.code2object(this.decodeLevel(levelcode))
-            );
-            this.updateCanvas();
-            this.levelLoaded();
-        }
+        }*/
+        this.level = GDLevel.fromBase64String(this.renderer, startup);
+        this.levelLoaded();
+        this.updateCanvas();
 
-        window.onresize = () => this.updateCanvas();
+        setTimeout(() => this.requestCanvasUpdate(), 2000);
+
+        window.onresize = () => this.requestCanvasUpdate();
 
         this.preloadFaces();
 
@@ -215,12 +327,7 @@ export default function MainUI(body, head) {
             this.panning = true;
             let main = this;
 
-            let update = () => {
-                main.updateCanvas();
-                if (main.panning)
-                    window.requestAnimationFrame(update);
-            }
-            update();
+            main.requestCanvasUpdate();
         };
         document.onmouseup   = () => this.panning = false;
 
@@ -229,7 +336,8 @@ export default function MainUI(body, head) {
                 let cam = this.renderer.camera;
 
                 cam.x -= e.movementX / cam.zoom;
-                cam.y -= e.movementY / cam.zoom;
+                cam.y += e.movementY / cam.zoom;
+                this.requestCanvasUpdate();
             }
         }
 
@@ -242,7 +350,7 @@ export default function MainUI(body, head) {
             if(cam.zoom > 10) cam.zoom = 10;
             else if(cam.zoom < 0.2) cam.zoom = 0.2;
             
-            this.updateCanvas();
+            this.requestCanvasUpdate();
         };
 
         util.add(this.head, util.element('script', [], [], {'src': "https://code.iconify.design/1/1.0.7/iconify.min.js"}) );
@@ -273,26 +381,31 @@ export default function MainUI(body, head) {
                             .catch(reject);
                     });
                 else if (t == 'level-click') {
+                    if (this.searchLevelLoading)
+                        return;
                     this.info.setLoading();
+                    this.searchLevelLoading = true;
+                    console.log("LOADING...");
                     requests.downloadLevel(p)
-                        .then(data => this.loadLevel(data))
+                        .then(data => {
+                            this.loadLevel(data);
+                            this.searchLevelLoading = false;
+                        })
                         .catch(console.err);
                 }
             });
             this.search.init();
 
             this.info = new InfoUI(this, (t, p) => {
-                if (t == "grid") this.options.grid = p;
-                if (t == "axis") this.options.axis = p;
-                if (t == "guidelines") this.options.guidelines = p;
+                if (t == "hideTriggers") this.options.hideTriggers = p;
 
-                this.updateCanvas();
+                this.requestCanvasUpdate();
             });
 
             this.info.init(this.options);
         }
 
+        this.generatePlayButton();
         this.generateFooter();
-        this.setLoadingScreen();
     };
 }

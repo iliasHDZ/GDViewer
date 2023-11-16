@@ -1,9 +1,5 @@
 # GDViewer
- Allows you to view online Geometry Dash levels
- 
- Try it out here: http://gdviewers.tk/
-
-UI Design: [Laica](https://github.com/Altenhh)
+Allows you to view online Geometry Dash levels
 
 # Running it
 
@@ -12,9 +8,9 @@ First you download all the dependencies:
 npm i
 ```
 
-Then you host it:
+Then you can run the developement server:
 ```
-http-server -p 8000 -c -1
+npm run dev
 ```
 
 Then go to `localhost:8000/dist`

@@ -28,9 +28,6 @@ export default function SearchUI(main, callback) {
 
         this.section = util.div('search-section', [
             util.div('search-field', [
-                util.div('searchbar-button', 
-                    util.iconify('mdi:filter', 'icon') ),
-                
                 this.input,
                 search_button
             ])

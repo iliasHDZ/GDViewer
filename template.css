@@ -97,7 +97,7 @@ div.search-field {
 }
 
 .search-glass {
-    transform: rotate(360deg) scale(0.45) !important;
+    transform: rotate(360deg) scale(0.60) !important;
 }
 
 .icon {
@@ -141,6 +141,78 @@ div.search-field {
 
 .search-level:active {
     background-color: rgb(209, 209, 209);
+}
+
+.play-section {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+
+    width: 40px;
+    height: 40px;
+
+    padding: 8px;
+
+    background-color: white;
+    border-radius: 10px;
+
+    -webkit-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.2);
+    -moz-box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.2);
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.2);
+
+    display: flex;
+    flex-direction: row;
+}
+
+@keyframes rotation {
+    0%   {transform: rotate(0deg);}
+    50%  {transform: rotate(180deg);}
+    100% {transform: rotate(360deg);}
+}
+
+.play-loader {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-bottom: auto;
+    border: 4px solid transparent;
+    width: 22px;
+    height: 22px;
+    border-radius: 32px;
+    border-left-color: rgb(85, 85, 85);
+    border-top-color: rgb(85, 85, 85);
+    animation-name: rotation;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    animation-duration: 1s;
+}
+
+.play-button {
+    width: 40px;
+    height: 100%;
+
+    color: rgb(85, 85, 85);
+    transform: scale(0.8);
+    
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    cursor: pointer;
+}
+
+.play-button:hover {
+    background-color: rgb(238, 238, 238);
+    border-radius: 5px;
+}
+
+.play-button:active {
+    background-color: rgb(209, 209, 209);
+}
+
+.play-icon {
+    transform: rotate(360deg) scale(0.60) !important;
 }
 
 .level-face {

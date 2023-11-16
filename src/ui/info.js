@@ -135,9 +135,7 @@ export default function InfoUI(main, callback) {
         this.section = util.div('info-section', [
             show_cat,
             this.createCategory("Settings", [
-                this.createCheckbox("Show guidelines", opts.guidelines, (c) => callback('guidelines', c)),
-                this.createCheckbox("Show grid", opts.grid, (c) => callback('grid', c)),
-                this.createCheckbox("Show axis", opts.axis, (c) => callback('axis', c)),
+                this.createCheckbox("Hide triggers", opts.hideTriggers, (c) => callback('hideTriggers', c)),
             ]),
         ]);
 
