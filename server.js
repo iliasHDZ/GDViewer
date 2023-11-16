@@ -34,7 +34,6 @@ function byteSizeToString(size) {
 }
 
 function addToSongCache(id, size) {
-    console.log("Song added to cache " + id);
     songCacheTracker[+id] = { time: nowSecs(), size };
 }
 
@@ -50,7 +49,6 @@ function getSongCachePath(id) {
 }
 
 function deleteSongInCache(id) {
-    console.log(`- Deleting song ${id}...`);
     fs.unlinkSync(getSongCachePath(id));
     delete songCacheTracker[id];
 }
@@ -368,4 +366,4 @@ app.get('/getsong/:id', async (req, res) => {
 
 app.use(express.static('dist'));
 
-app.listen(PORT, () => console.log('Proxy server running at ' + PORT));
+app.listen(PORT, () => console.log('Server running at ' + PORT));
