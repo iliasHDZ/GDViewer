@@ -184,10 +184,10 @@ export default function MainUI(body, head) {
         if (this.audio == null)
             return;
 
-        this.audioStartOffset = this.level.timeAt(Math.max(this.renderer.camera.x, 0));
         this.audioStartTime = performance.now() / 1000;
         this.audio.play();
-        this.audio.currentTime = this.audioStartOffset + this.level.song_offset;
+        this.audio.currentTime = this.level.timeAt(Math.max(this.renderer.camera.x, 0)) + this.level.song_offset;
+        this.audioStartOffset = this.audio.currentTime - this.level.song_offset;
 
         this.playing = true;
         const level = this;
