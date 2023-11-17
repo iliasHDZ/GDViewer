@@ -1,5 +1,6 @@
 node_modules
 dist/
+songs/
 config.json
 template.css
 template.html
