@@ -157,7 +157,7 @@ export default function MainUI(body, head) {
             const audio = new Audio(requests.resolvePath(`/getsong/${this.levelInfo.customSong}.mp3`));
 
             audio.addEventListener('canplaythrough', () => {
-                audio.volume = 0.3;
+                audio.volume = 0.2;
                 level.audio = audio;
                 resolve();
             });
@@ -184,8 +184,10 @@ export default function MainUI(body, head) {
         if (this.audio == null)
             return;
 
-        this.audio.currentTime = this.level.song_offset + this.level.timeAt(Math.max(this.renderer.camera.x, 0));
+        this.audioStartOffset = this.level.timeAt(Math.max(this.renderer.camera.x, 0));
+        this.audioStartTime = performance.now() / 1000;
         this.audio.play();
+        this.audio.currentTime = this.audioStartOffset + this.level.song_offset;
 
         this.playing = true;
         const level = this;
@@ -193,7 +195,8 @@ export default function MainUI(body, head) {
             if (level.playing)
                 window.requestAnimationFrame(update);    
 
-            level.renderer.camera.x = level.level.posAt(level.audio.currentTime - level.level.song_offset);
+            const deltaFromStart = (performance.now() / 1000) - level.audioStartTime;
+            level.renderer.camera.x = level.level.posAt(level.audioStartOffset + deltaFromStart);
             this.requestCanvasUpdate();
         }
         
