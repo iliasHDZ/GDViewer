@@ -8,15 +8,23 @@ const querystring = require('querystring');
 
 const app = express();
 
-const PORT = 80;
-
 let songCacheTracker = {};
 
-const KIB = 1024;
-const MIB = 1024 * KIB;
+let config;
 
-const MAX_SONG_CACHE_TIME = 2 * 60;
-const MAX_SONG_CACHE_SIZE = 50 * MIB;
+function loadConfig() {
+    try {
+        config = JSON.parse(fs.readFileSync(path.resolve(__dirname, "./config.json")));
+    } catch {
+        return false;
+    }
+    return true;
+}
+
+if (!loadConfig()) {
+    console.log("Could not find config.json");
+    process.exit(-1);
+}
 
 function nowSecs() {
     return Math.floor(Date.now() / 1000);
@@ -57,7 +65,7 @@ async function songCacheCleanUp() {
     console.log("Cleaning up song cache...");
     let songsDeleted = 0;
     for (let [k, v] of Object.entries(songCacheTracker)) {
-        if (nowSecs() - v.time > MAX_SONG_CACHE_TIME) {
+        if (nowSecs() - v.time > config.max_song_cache_time) {
             deleteSongInCache(+k);
             songsDeleted++;
         }
@@ -94,25 +102,25 @@ async function checkupSongCache() {
 
     checkingup = true;
     let totalSize = getSongCacheSize();
-    if (totalSize <= MAX_SONG_CACHE_SIZE) {
+    if (totalSize <= config.max_song_cache_size) {
         checkingup = false;
         return;
     }
 
-    console.log(`Song cache too big, size: ${byteSizeToString(totalSize)} (max. ${byteSizeToString(MAX_SONG_CACHE_SIZE)})`);
+    console.log(`Song cache too big, size: ${byteSizeToString(totalSize)} (max. ${byteSizeToString(config.max_song_cache_size)})`);
 
     await songCacheCleanUp();
 
     totalSize = getSongCacheSize();
-    if (totalSize <= MAX_SONG_CACHE_SIZE) {
+    if (totalSize <= config.max_song_cache_size) {
         checkingup = false;
         return;
     }
     
-    console.log(`Cache cleanup not enough, size: ${byteSizeToString(totalSize)} (max. ${byteSizeToString(MAX_SONG_CACHE_SIZE)})`);
+    console.log(`Cache cleanup not enough, size: ${byteSizeToString(totalSize)} (max. ${byteSizeToString(config.max_song_cache_size)})`);
     console.log("Deleting songs randomly instead");
 
-    let surplus = totalSize - MAX_SONG_CACHE_SIZE;
+    let surplus = totalSize - config.max_song_cache_size;
     let songsDeleted = 0;
 
     for (let [k, v] of Object.entries(songCacheTracker)) {
@@ -366,4 +374,4 @@ app.get('/getsong/:id', async (req, res) => {
 
 app.use(express.static('dist'));
 
-app.listen(PORT, () => console.log('Server running at ' + PORT));
+app.listen(config.port, () => console.log('Server running at ' + config.port));

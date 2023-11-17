@@ -8,8 +8,6 @@ import requests from './../requests'
 
 import startup from '../startup.json'
 
-import pako from 'pako'
-
 export default function MainUI(body, head) {
     this.body = body;
     this.head = head;
@@ -186,7 +184,7 @@ export default function MainUI(body, head) {
         if (this.audio == null)
             return;
 
-        this.audio.currentTime = this.level.song_offset + this.level.timeAt(this.renderer.camera.x);
+        this.audio.currentTime = this.level.song_offset + this.level.timeAt(Math.min(this.renderer.camera.x, 0));
         this.audio.play();
 
         this.playing = true;

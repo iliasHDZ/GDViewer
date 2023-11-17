@@ -1,0 +1,5 @@
+{
+    "max_song_cache_time": 86400,
+    "max_song_cache_size": 524288000,
+    "port": 80
+}
