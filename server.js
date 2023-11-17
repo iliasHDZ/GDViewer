@@ -362,7 +362,9 @@ app.get('/getsong/:id', async (req, res) => {
         res.writeHead(206, {
             'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
             'Accept-Ranges': 'bytes', 'Content-Length': chunksize,
-            'Content-Type': 'audio/mpeg'
+            'Content-Type': 'audio/mpeg',
+            'Connection': 'keep-alive',
+            'Keep-Alive': 'timeout=900'
         });
         rstream.pipe(res);
     } else {
