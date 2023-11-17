@@ -257,6 +257,21 @@ export default function MainUI(body, head) {
         if (this.assets_done && this.level_done) this.closeLoadingScreen();
     }
 
+    this.loadLevelFromServers = async (id) => {
+        if (this.searchLevelLoading)
+            return;
+        window.history.pushState({id}, '', window.location.origin + window.location.pathname + "?id=" + id);
+        this.searchLevelLoading = true;
+        this.info.setLoading();
+        const data = await requests.downloadLevel(id)
+        this.loadLevel(data);
+        this.searchLevelLoading = false;
+    }
+
+    this.loadStartupLevel = () => {
+        this.level = GDLevel.fromBase64String(this.renderer, startup);
+    }
+
     this.searchLevelLoading = false;
 
     this.init = async () => {
@@ -312,15 +327,66 @@ export default function MainUI(body, head) {
             }
         } else {
         }*/
-        this.level = GDLevel.fromBase64String(this.renderer, startup);
+        this.canvas.width  = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+
+        this.preloadFaces();
+
+        if (typeof URL_EMBED === 'undefined') {
+            this.search = new SearchUI(this, (t, p) => {
+                if (t == 'search')
+                    return new Promise((resolve, reject) => {
+                        requests.searchLevels(p)
+                            .then(lvls => {
+                                let disp = [];
+
+                                for (let lvl of lvls)
+                                    disp.push({
+                                        id:     +lvl.id,
+                                        title:  lvl.name,
+                                        author: lvl.author,
+                                        face:   lvl.difficultyFace,
+                                        plays:  lvl.downloads,
+                                        likes:  lvl.likes
+                                    });
+
+                                resolve(disp);
+                            })
+                            .catch(reject);
+                    });
+                else if (t == 'level-click') {
+                    this.loadLevelFromServers(p);
+                }
+            });
+            this.search.init();
+
+            this.info = new InfoUI(this, (t, p) => {
+                if (t == "hideTriggers") this.options.hideTriggers = p;
+
+                this.requestCanvasUpdate();
+            });
+
+            this.info.init(this.options);
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        let urlLevelLoaded = false;
+        if (params.has('id') && !isNaN(+params.get('id'))) {
+            const id = +params.get('id');
+            try {
+                await this.loadLevelFromServers(id);
+                urlLevelLoaded = true;
+            } catch {}
+        }
+
+        if (!urlLevelLoaded)
+            this.loadStartupLevel();
         this.levelLoaded();
         this.updateCanvas();
 
         setTimeout(() => this.requestCanvasUpdate(), 2000);
 
         window.onresize = () => this.requestCanvasUpdate();
-
-        this.preloadFaces();
 
         this.canvas.onmousedown = (e) => {
             if (e.button != 0) return;
@@ -359,52 +425,6 @@ export default function MainUI(body, head) {
         util.add(this.head, util.element('link', [], [],
             {'rel': "stylesheet", 'href': "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;1,400;1,600&display=swap"}) );
 
-        if (typeof URL_EMBED === 'undefined') {
-            this.search = new SearchUI(this, (t, p) => {
-                if (t == 'search')
-                    return new Promise((resolve, reject) => {
-                        requests.searchLevels(p)
-                            .then(lvls => {
-                                let disp = [];
-
-                                for (let lvl of lvls)
-                                    disp.push({
-                                        id:     +lvl.id,
-                                        title:  lvl.name,
-                                        author: lvl.author,
-                                        face:   lvl.difficultyFace,
-                                        plays:  lvl.downloads,
-                                        likes:  lvl.likes
-                                    });
-
-                                resolve(disp);
-                            })
-                            .catch(reject);
-                    });
-                else if (t == 'level-click') {
-                    if (this.searchLevelLoading)
-                        return;
-                    this.info.setLoading();
-                    this.searchLevelLoading = true;
-                    console.log("LOADING...");
-                    requests.downloadLevel(p)
-                        .then(data => {
-                            this.loadLevel(data);
-                            this.searchLevelLoading = false;
-                        })
-                        .catch(console.err);
-                }
-            });
-            this.search.init();
-
-            this.info = new InfoUI(this, (t, p) => {
-                if (t == "hideTriggers") this.options.hideTriggers = p;
-
-                this.requestCanvasUpdate();
-            });
-
-            this.info.init(this.options);
-        }
 
         this.generatePlayButton();
         this.generateFooter();
