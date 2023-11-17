@@ -376,4 +376,16 @@ app.get('/getsong/:id', async (req, res) => {
 
 app.use(express.static('dist'));
 
-app.listen(config.port, () => console.log('Server running at ' + config.port));
+const listenCallback = () => console.log('Server running at ' + config.port);
+
+if (config.https) {
+    const privateKey = fs.readFileSync(config.privateKeyPath);
+    const certificate = fs.readFileSync(config.certificatePath);
+    
+    https.createServer({
+        key: privateKey,
+        cert: certificate
+    }, app).listen(config.port, listenCallback);
+} else {
+    app.listen(config.port, listenCallback);
+}
