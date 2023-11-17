@@ -1,5 +1,5 @@
 const hostname = "https://gdbrowser.com";
-const proxy    = "";
+let proxy    = import.meta.env.DEV ? "http://127.0.0.1:8000" : "";
 const opts = {
     method: "GET"
 };
