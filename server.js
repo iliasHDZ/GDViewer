@@ -138,6 +138,32 @@ async function checkupSongCache() {
 initSongCache();
 checkupSongCache();
 
+function trimTilde(str) {
+    if (str.startsWith('~'))
+        str = str.substring(1);
+    if (str.endsWith('~'))
+        str = str.substring(0, str.length - 1);
+    return str;
+}
+
+function parseSongInfoResponse(data) {
+    if (data == '-1') return null;
+    let split = data.split('|');
+
+    let retData = {};
+
+    for (let i = 0; i < split.length; i += 2) {
+        if (i + 1 >= split.length)
+            break;
+
+        let key = +trimTilde(split[i]);
+
+        retData[+key] = trimTilde(split[i + 1]);
+    }
+
+    return retData;
+}
+
 function parseLevelResponse(data) {
     if (data == '-1') return '-1';
     let split = data.split(':');
@@ -145,15 +171,91 @@ function parseLevelResponse(data) {
     let retData = {};
 
     for (let i = 0; i < split.length; i += 2) {
-        if (split[i] == '1')
-            retData.id   = split[i + 1];
-        if (split[i] == '2')
-            retData.name = split[i + 1];
-        if (split[i] == '4')
-            retData.data = split[i + 1];
+        const value = split[i + 1];
+
+        switch (+split[i]) {
+        case 1: retData.id = +value; break;
+        case 2: retData.name = value; break;
+        case 3: retData.description = Buffer.from(value, 'base64').toString(); break;
+        case 4: retData.data = value; break;
+        case 6: retData.authorId = +value; break;
+        case 9: retData.diff = +value / 10; break;
+        case 10: retData.plays = +value; break;
+        case 12: retData.officialSong = value; break;
+        case 14: retData.likes = +value; break;
+        case 17: retData.demon = +value == 1; break;
+        case 19: retData.featured = +value > 0; break;
+        case 25: retData.auto = +value == 1; break;
+        case 35: retData.customSong = +value; break;
+        case 42: retData.epic = +value == 1; break;
+        case 43: retData.demonDiff = +value; break;
+        }
     }
 
+    let face = "";
+    if (retData.auto)
+        face = "auto";
+    else if (retData.demon) {
+        face = "demon-";
+        face += ['hard', 'hard', 'hard', 'easy', 'medium', 'insane', 'extreme'][retData.demonDiff ?? 0];
+    } else {
+        face = ['unrated', 'easy', 'normal', 'hard', 'harder', 'insane'][retData.diff ?? 0];
+    }
+
+    if (retData.epic)
+        face += "-epic";
+    else if (retData.featured)
+        face += "-featured";
+
+    retData.face = face;
     return retData;
+}
+
+function parseLevelsResponse(data) {
+    if (data == '-1') return '-1';
+    let mainSplit = data.split('#');
+    let split = mainSplit[0].split('|');
+
+    let songs = [];
+
+    let songsSplit = mainSplit[2].split(':');
+
+    for (let songStr of songsSplit) {
+        songs.push(parseSongInfoResponse(songStr));
+    }
+
+    let authors = {};
+
+    for (let authStr of mainSplit[1].split('|')) {
+        const split = authStr.split(':');
+        authors[+split[0]] = split[1];
+    }
+
+    let ret = [];
+
+    for (let lvl of split) {
+        const lvlObj = parseLevelResponse(lvl);
+
+        if (lvlObj.customSong != 0) {
+            const song = songs.find(s => +s[1] == lvlObj.customSong);
+            if (song) {
+                lvlObj.songName   = song[2];
+                lvlObj.songAuthor = song[4];
+            }
+        }
+
+        lvlObj.author = '-';
+        if (lvlObj.authorId != 0) {
+            const author = authors[lvlObj.authorId];
+            if (author) {
+                lvlObj.author = author;
+            }
+        }
+
+        ret.push(lvlObj);
+    }
+
+    return ret;
 }
 
 function sendRequest(endpoint, params) {
@@ -185,7 +287,7 @@ function sendRequest(endpoint, params) {
 
 async function getLevel(id) {
     const params = {
-        gameVersion: '20',
+        gameVersion: '21',
         binaryVersion: '35',
         gdw: '0',
         accountID: '0',
@@ -207,30 +309,37 @@ async function getLevel(id) {
     return res.data;
 }
 
-function trimTilde(str) {
-    if (str.startsWith('~'))
-        str = str.substring(1);
-    if (str.endsWith('~'))
-        str = str.substring(0, str.length - 1);
-    return str;
-}
+async function getLevels(query) {
+    const params = {
+        gameVersion: '21',
+        binaryVersion: '35',
+        gdw: '0',
+        type: '0',
+        str: query,
+        diff: '-',
+        len: '-',
+        page: '0',
+        total: '0',
+        uncompleted: '0',
+        onlyCompleted: '0',
+        featured: '0',
+        original: '0',
+        twoPlayer: '0',
+        coins: '0',
+        epic: '0',
+        secret: 'Wmfd2893gb7'
+        
+    };
 
-function parseSongInfoResponse(data) {
-    if (data == '-1') return null;
-    let split = data.split('|');
+    const data = await sendRequest("getGJLevels21.php", params);
+    const res = parseLevelsResponse(data);
+    //let res = parseLevelResponse(data);
 
-    let retData = {};
+    if (data == -1)
+        return '-1';
 
-    for (let i = 0; i < split.length; i += 2) {
-        if (i + 1 >= split.length)
-            break;
-
-        let key = +trimTilde(split[i]);
-
-        retData[key] = trimTilde(split[i + 1]);
-    }
-
-    return typeof(retData[10]) == 'string' ? decodeURIComponent(retData[10]) : null;
+    //console.log(`DOWNLOAD: ${res.name} (${res.id})`);
+    return JSON.stringify(res, null, 4);//res.data;
 }
 
 function downloadFile(url, destPath) {
@@ -273,7 +382,8 @@ async function getSongUrl(id) {
     };
 
     const data = await sendRequest("getGJSongInfo.php", params);
-    return parseSongInfoResponse(data);
+    const res = parseSongInfoResponse(data);
+    return typeof(res[10]) == 'string' ? decodeURIComponent(res[10]) : null;
 }
 
 async function getSongPath(id) {
@@ -306,6 +416,22 @@ app.get('/getlevel/:id', async (req, res) => {
 
     try {
         res.write(await getLevel(Math.floor(req.params.id)));
+    } catch {
+        res.write('-1');
+    }
+    res.end();
+});
+
+app.get('/getlevels/:query', async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (typeof req.params.query != 'string') {
+        res.write('-1');
+        res.end();
+        return;
+    }
+
+    try {
+        res.write(await getLevels(req.params.query));
     } catch {
         res.write('-1');
     }

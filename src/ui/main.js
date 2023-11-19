@@ -85,6 +85,8 @@ export default function MainUI(body, head) {
         if (this.loadingLevel)
             return;
 
+        console.log(level);
+
         this.loadingLevel = true;
 
         this.level = GDLevel.fromBase64String(this.renderer, level.data);
@@ -101,9 +103,9 @@ export default function MainUI(body, head) {
             this.info.loadLevel({
                 title:  level.name,
                 author: level.author,
-                face:   level.difficultyFace,
+                face:   level.face,
                 likes:  level.likes,
-                plays:  level.downloads,
+                plays:  level.plays,
                 desc:   level.description,
                 song_title:  level.songName,
                 song_author: level.songAuthor
@@ -345,8 +347,8 @@ export default function MainUI(body, head) {
                                         id:     +lvl.id,
                                         title:  lvl.name,
                                         author: lvl.author,
-                                        face:   lvl.difficultyFace,
-                                        plays:  lvl.downloads,
+                                        face:   lvl.face,
+                                        plays:  lvl.plays,
                                         likes:  lvl.likes
                                     });
 

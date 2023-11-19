@@ -8,12 +8,12 @@ export default {
     downloadLevel: (id) => {
         return new Promise((resolve, reject) => {
             let retData;
-            fetch(hostname + "/api/level/" + id, opts)
+            fetch(proxy + "/getlevels/" + id, opts)
                 .then(res => res.json())
                 .then(data => {
                     if (data == -1) reject();
                     else {
-                        retData = data;
+                        retData = data[0];
                         return fetch(proxy + "/getlevel/" + id, opts);
                     }
                 })
@@ -30,7 +30,7 @@ export default {
     },
     searchLevels: (query) => {
         return new Promise((resolve, reject) => {
-            fetch(hostname + "/api/search/" + query, opts)
+            fetch(proxy + "/getlevels/" + encodeURIComponent(query), opts)
                 .then(res => res.json())
                 .then(data => {
                     if (data == -1) reject();
