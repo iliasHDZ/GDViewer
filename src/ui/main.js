@@ -85,8 +85,6 @@ export default function MainUI(body, head) {
         if (this.loadingLevel)
             return;
 
-        console.log(level);
-
         this.loadingLevel = true;
 
         this.level = GDLevel.fromBase64String(this.renderer, level.data);
@@ -151,12 +149,12 @@ export default function MainUI(body, head) {
     }
 
     this.loadAudio = function() {
-        if (!this.levelInfo || typeof(this.levelInfo.customSong) != 'number' || this.levelInfo.customSong == 0)
+        if (!this.levelInfo || typeof(this.levelInfo.songUrl) != 'string' || this.levelInfo.songUrl == '')
             return;
 
         const level = this;
         return new Promise((resolve, _) => {
-            const audio = new Audio(requests.resolvePath(`/getsong/${this.levelInfo.customSong}.mp3`));
+            const audio = new Audio(requests.resolvePath(this.levelInfo.songUrl));
 
             audio.addEventListener('canplaythrough', () => {
                 audio.volume = 0.2;

@@ -12,6 +12,48 @@ let songCacheTracker = {};
 
 let config;
 
+const officialSongs = {
+    [-1]: ["Practice: Stay Inside Me", "OcularNebula", "StayInsideMe"],
+    [0]: ["Stereo Madness",            "Foreverbound", "StereoMadness"],
+    [1]: ["Back on Track",             "DJVI",         "BackOnTrack"],
+    [2]: ["Polargeist",                "Step",         "Polargeist"],
+    [3]: ["Dry Out",                   "DJVI",         "DryOut"],
+    [4]: ["Base after Base",           "DJVI",         "BaseAfterBase"],
+    [5]: ["Cant Let Go",               "DJVI",         "CantLetGo"],
+    [6]: ["Jumper",                    "Waterflame",   "Jumper"],
+    [7]: ["Time Machine",              "Waterflame",   "TimeMachine"],
+    [8]: ["Cycles",                    "DJVI",         "Cycles"],
+    [9]: ["xStep",                     "DJVI",         "xStep"],
+    [10]: ["Clutterfunk",              "Waterflame",   "Clutterfunk"],
+    [11]: ["Theory of Everything",     "DJ-Nate",      "TheoryOfEverything"],
+    [12]: ["Electroman Adventures",    "Waterflame",   "ElectromanAdventures"],
+    [13]: ["Clubstep",                 "DJ-Nate",      "Clubstep"],
+    [14]: ["Electrodynamix",           "DJ-Nate",      "Electrodynamix"],
+    [15]: ["Hexagon Force",            "Waterflame",   "HexagonForce"],
+    [16]: ["Blast Processing",         "Waterflame",   "BlastProcessing"],
+    [17]: ["Theory of Everything 2",   "DJ-Nate",      "TheoryOfEverything2"],
+    [18]: ["Geometrical Dominator",    "Waterflame",   "GeometricalDominator"],
+    [19]: ["Deadlocked",               "F-777",        "Deadlocked"],
+    [20]: ["Fingerdash",               "MDK",          "Fingerdash"],
+    [21]: ["The Seven Seas",           "F-777",        "The7Seas"],
+    [22]: ["Viking Arena",             "F-777",        "VikingArena"],
+    [23]: ["Airborne Robots",          "F-777",        "AirborneRobots"],
+    [24]: ["The Challenge",            "RobTop",       ""],
+    [25]: ["Payload",                  "Dex Arson",    "Payload"],
+    [26]: ["Beast Mode",               "Dex Arson",    "BeastMode"],
+    [27]: ["Machina",                  "Dex Arson",    "Machina"],
+    [28]: ["Years",                    "Dex Arson",    "Years"],
+    [29]: ["Frontlines",               "Dex Arson",    "Frontlines"],
+    [30]: ["Space Pirates",            "Waterflame",   "SpacePirates"],
+    [31]: ["Striker",                  "Waterflame",   "Striker"],
+    [32]: ["Embers",                   "Dex Arson",    "Embers"],
+    [33]: ["Round 1",                  "Dex Arson",    "Round1"],
+    [34]: ["Monster Dance Off",        "F-777",        "MonsterDanceOff"],
+    [35]: ["Press Start",              "MDK",          "PressStart"],
+    [36]: ["Nock Em",                  "Bossfight",    "NockEm"],
+    [37]: ["Power Trip",               "Boom Kitty",   "PowerTrip"]
+};
+
 function loadConfig() {
     try {
         config = JSON.parse(fs.readFileSync(path.resolve(__dirname, "./config.json")));
@@ -241,6 +283,14 @@ function parseLevelsResponse(data) {
             if (song) {
                 lvlObj.songName   = song[2];
                 lvlObj.songAuthor = song[4];
+                lvlObj.songUrl    = `/getsong/${lvlObj.customSong}.mp3`;
+            }
+        } else {
+            const song = officialSongs[+lvlObj.officialSong];
+            if (song) {
+                lvlObj.songName   = song[0];
+                lvlObj.songAuthor = song[1];
+                lvlObj.songUrl    = `/assets/songs/${song[2]}.mp3`;
             }
         }
 
