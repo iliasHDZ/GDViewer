@@ -1,6 +1,7 @@
 node_modules
 dist/
 /songs/
+./package-lock.json
 config.json
 template.css
 template.html
